@@ -1,24 +1,45 @@
-declare type Optional<T> = T | null;
+declare namespace App {
 
-declare namespace Application {
+    namespace Network {
+        namespace WebSocket {
+            interface Connection {
+                socket: import('socket.io').Socket;
+                user?: Business.User.Value.User;
+                token?: string;
+            }
+        }
+
+    }
+
     namespace Business {
+
         namespace User {
+
             namespace Value {
+
                 interface User {
                     name: string;
                     password?: string;
                     nickname: string;
-                    avatarImage: Buffer;
+                    avatarImage?: Buffer;
+                    tenant: Tenant[],
+                }
+
+                interface Tenant {
+                    userId: string;
+                    token: string;
+                    expiredAt: Date;
                 }
             }
         }
     }
 
-    interface Configuration {
-        database: Configuration.DatabaseConfiguration;
-    }
-
     namespace Configuration {
+
+        interface Configuration {
+            database: DatabaseConfiguration;
+        }
+
         interface DatabaseConfiguration {
             mongo: MongoConfiguration;
         }
@@ -35,4 +56,3 @@ declare namespace Application {
         }
     }
 }
-

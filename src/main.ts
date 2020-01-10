@@ -1,21 +1,12 @@
-import InversifyUtil from "~/Common/Utils/InversifyUtil";
-import MongoPool from "~/Common/Mongo/MongoPool";
-import MongoConfigurer from "~/Common/Mongo/MongoConfigurer";
-import MongoUtil from "~/Common/Utils/MongoUtil";
-import MongoTemplate from "~/Common/Mongo/MongoTemplate";
+import 'reflect-metadata';
+import 'module-alias/register';
+import 'ts-node/register';
 
-import User from "~/Business/User/Repository/UserRepository";
+import {initApp} from '~/init';
 import {runApp} from '~/app';
 
-const mongoPool = MongoConfigurer.configure(MongoUtil.getMongoConfiguration());
-
-InversifyUtil.getContainer().bind(MongoPool).toConstantValue(mongoPool);
-InversifyUtil.getContainer().bind(MongoTemplate).toSelf();
-
-InversifyUtil.getContainer().bind(User).toSelf();
-
 const bootstrap = async () => {
-    await mongoPool.connect();
+    await initApp();
     await runApp();
 };
 

@@ -2,11 +2,7 @@
   "compilerOptions": {
     "target": "es5",
     "lib": [
-      "es6",
-      "dom"
-    ],
-    "types": [
-      "reflect-metadata"
+      "es6"
     ],
     "module": "commonjs",
     "moduleResolution": "node",
@@ -14,17 +10,20 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "inlineSourceMap": true,
-    "outDir": "dist",
+    "typeRoots": [
+      "node_modules/@types",
+      "./typings"
+    ],
     "baseUrl": ".",
     "paths": {
       "~/*": [
         "src/*"
       ]
-    }
+    },
+    "outDir": "dist"
   },
   "include": [
-    "src/**/*.ts",
-    "decl/**/*.d.ts"
+    "src/**/*.ts"
   ],
   "exclude": [
     "node_modules"

@@ -1,7 +1,7 @@
 import MongoPool from "./MongoPool";
 
 class MongoConfigurer {
-    public static configure(configuration: Application.Configuration.MongoConfiguration): MongoPool {
+    public static configure(configuration: App.Configuration.MongoConfiguration): MongoPool {
         return new MongoPool(configuration.instances.map((instanceConfiguration, i) => {
             return {
                 id: 'instance-' + i,

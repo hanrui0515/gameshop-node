@@ -13,6 +13,7 @@ import MongoUtil from "./Common/Utils/MongoUtil";
 import ChatUtil from "./Chat/ChatUtil";
 import UserRepository from "~/Business/User/Repository/UserRepository";
 import InversifyUtil from "~/Common/Utils/InversifyUtil";
+import TenantRepository from "~/Business/User/Repository/TenantRepository";
 
 
 async function connectMongoDB(): Promise<MongoClient> {
@@ -71,12 +72,28 @@ async function runApp() {
     router
         .put('/api/v1/user/register', async (ctx) => {
             const requestData = {
-                name: ctx.request.body.user,
+                name: ctx.request.body.name,
                 password: ctx.request.body.password,
                 passwordConfirmation: ctx.request.body.passwordConfirmation,
                 nickname: ctx.request.body.nickname,
             };
 
+            if (!requestData.name) {
+                KoaUtil.setResponse(ctx, ResponseBody.unprocessableEntity('The field "name" is required'));
+                return;
+            }
+            if (!requestData.password) {
+                KoaUtil.setResponse(ctx, ResponseBody.unprocessableEntity('The field "password" is required'));
+                return;
+            }
+            if (!requestData.passwordConfirmation) {
+                KoaUtil.setResponse(ctx, ResponseBody.unprocessableEntity('The field "passwordConfirmation" is required'));
+                return;
+            }
+            if (!requestData.nickname) {
+                KoaUtil.setResponse(ctx, ResponseBody.unprocessableEntity('The field "nickname" is required'));
+                return;
+            }
             if (requestData.password !== requestData.passwordConfirmation) {
                 KoaUtil.setResponse(ctx, ResponseBody.unprocessableEntity('The passwords which your first and second typing are not equal'));
                 return;
@@ -90,6 +107,7 @@ async function runApp() {
                 name: requestData.name,
                 password: UserUtil.makeHashedPassword(requestData.password),
                 nickname: requestData.nickname,
+                tenants: []
             })) {
                 KoaUtil.setResponse(ctx, ResponseBody.error(-500, 'Internal error', 'Could not finished the request caused by internal error'));
                 return;
@@ -105,7 +123,7 @@ async function runApp() {
             };
 
             if (!requestData.name) {
-                KoaUtil.setResponse(ctx, ResponseBody.unprocessableEntity('The field "user" is required'));
+                KoaUtil.setResponse(ctx, ResponseBody.unprocessableEntity('The field "name" is required'));
                 return;
             }
             if (!requestData.password) {
@@ -121,12 +139,37 @@ async function runApp() {
             const expiredAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
             const token = JWTUtil.sign({name: requestData.name}, expiredAt);
 
-            await UserUtil.setupToken(db, await UserUtil.nameToId(db, requestData.name), token, expiredAt);
+            const tenantRepository = InversifyUtil.getContainer().get(TenantRepository);
 
-            KoaUtil.setResponse(ctx, ResponseBody.success({
-                token: token,
-                expiredAt: expiredAt.getTime() / 1000,
-            }));
+            const userId = await UserUtil.nameToId(db, requestData.name);
+            const doc = {userId, token, expiredAt};
+
+            await tenantRepository.createTenant(doc);
+
+            KoaUtil.setResponse(ctx, ResponseBody.success({...doc, expiredAt: doc.expiredAt.getTime() / 1000}));
+        });
+    router
+        .post('/api/v1/user/authorize', async (ctx) => {
+            const requestData = {
+                token: ctx.request.body.token,
+            };
+
+            if (!requestData.token) {
+                KoaUtil.setResponse(ctx, ResponseBody.unprocessableEntity('the field "token" is required'));
+                return;
+            }
+
+            const tenantRepository = InversifyUtil.getContainer().get(TenantRepository);
+            const userRepository = InversifyUtil.getContainer().get(UserRepository);
+
+            if (!await tenantRepository.existsTenantWithToken(requestData.token)) {
+                KoaUtil.setResponse(ctx, ResponseBody.unauthenticated('invalid token'));
+                return;
+            }
+
+            const user = userRepository.findByToken(requestData.token);
+
+            KoaUtil.setResponse(ctx, ResponseBody.success({user}));
         });
     router
         .use(userAuthorizationMiddleware)
@@ -160,59 +203,53 @@ async function runApp() {
     koa.use(Parser());
     koa.use(router.routes());
 
-    const onlineSockets: Map<string, boolean> = new Map<string, boolean>();
-    const userIdToSocketIdMapping: Map<string, string> = new Map<string, string>();
-    const socketIdToUserIdMapping: Map<string, string> = new Map<string, string>();
-    const unauthorizedSockets: Map<string, boolean> = new Map<string, boolean>();
+    let connections: App.Network.WebSocket.Connection[] = [];
 
     io.on('connection', (socket) => {
         console.log('[' + new Date().toISOString() + '] Incoming WebSocket connection from ' + socket.request.connection.remoteAddress);
 
-        const sid = socket.id;
+        connections.push({
+            socket: socket,
+            user: null,
+            token: null,
+        });
 
-        const initSocket = () => {
+        const socketId = socket.id;
 
+        const bindUser = (token: string, user: App.Business.User.Value.User) => {
+            const conn = connections.filter(connection => connection.socket.id === socket.id)[0];
+
+            conn.token = token;
+            conn.user = user;
+        };
+
+        const unbindUser = () => {
+            const conn = connections.filter(connection => connection.socket.id === socket.id)[0];
+
+            conn.token = null;
+            conn.user = null;
         };
 
         const destroySocket = () => {
-            onlineSockets.delete(sid);
-            unauthorizedSockets.delete(sid);
-            if (socketIdToUserIdMapping.has(sid)) {
-                userIdToSocketIdMapping.delete(socketIdToUserIdMapping.get(sid));
-            }
-            socketIdToUserIdMapping.delete(sid);
+            connections = connections.filter(connection => connection.socket.id !== socket.id);
         };
 
-        onlineSockets.set(sid, true);
-        unauthorizedSockets.set(sid, true);
-
-        socket.emit('authorize', {waitingTime: SocketIOConstant.authorizationTimeout});
-
-        const authorizationTimer = setTimeout(() => {
-            if (unauthorizedSockets.has(sid)) {
-                socket.emit('AUTHORIZE_TIMEOUT');
-                socket.disconnect(true);
-                unauthorizedSockets.delete(sid);
-            }
-        }, SocketIOConstant.authorizationTimeout);
-
-        socket.on('authorize', async ({token}) => {
+        socket.on('authorize', async (args: any) => {
             let user: object;
 
-            if (!(user = await UserUtil.matchToken(db, token))) {
+            const userRepository = InversifyUtil.getContainer().get(UserRepository);
+
+            const result = await userRepository.findByToken(args.token);
+            if (result.isNullable()) {
                 socket.emit('authorizeError', {error: {message: 'Invalid token'}});
                 socket.disconnect(true);
-                unauthorizedSockets.delete(sid);
-                clearTimeout(authorizationTimer);
                 return;
             }
 
             // @ts-ignore
-            socketIdToUserIdMapping.set(sid, MongoUtil.convertToStringId(user._id));
-            // @ts-ignore
-            userIdToSocketIdMapping.set(MongoUtil.convertToStringId(user._id), sid);
+            bindUser(args.token, MongoUtil.convertToStringId(user._id));
 
-            socket.emit('authorized');
+            socket.emit('authorizeResponse', {user: {...user, password: undefined}});
         });
 
         socket.on('startSession', ({userId}) => {

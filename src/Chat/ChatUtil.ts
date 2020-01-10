@@ -25,13 +25,13 @@ export default class ChatUtil {
         return result.result.ok === 1;
     }
 
-    public static async flushOfflineMessage(db: Db, sessionId: string): Promise<object[]> {
-        const collection = db.collection('chat_session');
-        try {
-            const document = await collection.find({_id: MongoUtil.convertToObjectId(sessionId)}, {projection: {offlineMessages: 1}});
-            const result = await collection
-
-        }
-
-    }
+    // public static async flushOfflineMessage(db: Db, sessionId: string): Promise<object[]> {
+    //     const collection = db.collection('chat_session');
+    //     try {
+    //         const document = await collection.find({_id: MongoUtil.convertToObjectId(sessionId)}, {projection: {offlineMessages: 1}});
+    //         const result = await collection
+    //
+    //     }
+    //
+    // }
 }

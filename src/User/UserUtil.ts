@@ -68,8 +68,11 @@ export default class UserUtil {
     }
 
     public static async setupToken(db: Db, userId: string, token: string, expiredAt: Date): Promise<boolean> {
-        const collection = db.collection('user_token');
-        const result = await collection.insertOne({userId: MongoUtil.convertToObjectId(userId), token, expiredAt});
+        const collection = db.collection('user');
+        const result = await collection.updateOne(
+            {_id: MongoUtil.convertToObjectId(userId)},
+            {$push: {tenants: [{token, expiredAt}]}}
+        );
 
         return result.result.ok === 1;
     }

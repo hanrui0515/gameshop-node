@@ -16,20 +16,20 @@ class ResponseBody {
         return new ResponseBody(500, new Error(code, message, details), null, this.makeTimestamp());
     }
 
-    public static unauthenticated(details?: string): ResponseBody {
-        return new ResponseBody(401, new Error(-401, 'The access is unauthenticated', details), null, this.makeTimestamp());
+    public static unauthenticated(message?: string, details?: string): ResponseBody {
+        return new ResponseBody(401, new Error(-401, message || 'the access is unauthenticated', details), null, this.makeTimestamp());
     }
 
-    public static forbidden(details?: string): ResponseBody {
-        return new ResponseBody(403, new Error(-403, 'The resource is forbidden to access', details), null, this.makeTimestamp());
+    public static forbidden(message?: string, details?: string): ResponseBody {
+        return new ResponseBody(403, new Error(-403, message || 'the resource is forbidden to access', details), null, this.makeTimestamp());
     }
 
-    public static notFound(details?: string): ResponseBody {
-        return new ResponseBody(404, new Error(-404, 'The resource was not found', details), null, this.makeTimestamp());
+    public static notFound(message?: string, details?: string): ResponseBody {
+        return new ResponseBody(404, new Error(-404, message || 'the requested resource was not found', details), null, this.makeTimestamp());
     }
 
-    public static unprocessableEntity(details?: string): ResponseBody {
-        return new ResponseBody(422, new Error(-422, 'Your submitted fields had wrong', details), null, this.makeTimestamp());
+    public static unprocessableEntity(message?: string, details?: string): ResponseBody {
+        return new ResponseBody(422, new Error(-422, message || 'tour submitted fields had wrong', details), null, this.makeTimestamp());
     }
 
     public withStatus(status: number): ResponseBody {

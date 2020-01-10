@@ -1,6 +1,7 @@
 import {Db, MongoClient, MongoClientOptions} from "mongodb";
 import NoAvailableInstanceError from "~/Common/Mongo/NoAvailableInstanceError";
 import UnavailableInstanceError from "~/Common/Mongo/UnavailableInstanceError";
+import Optional from "~/Common/Utils/Optional";
 
 type MongoInstanceId = string;
 
@@ -13,44 +14,40 @@ interface MongoInstanceConfig {
 
 class MongoInstance {
     private config: MongoInstanceConfig;
-    private client: Optional<MongoClient> = null;
+    private client: Optional<MongoClient> = Optional.nullable();
 
     public constructor(config: MongoInstanceConfig) {
         this.config = config;
     }
 
     public async connect(): Promise<void> {
-        this.client = await MongoClient.connect(this.config.uri, this.config.options);
+        this.client = Optional.of(await MongoClient.connect(this.config.uri, this.config.options));
     }
 
     public async disconnect(shouldForceClose?: boolean): Promise<void> {
-        await this.client.close(shouldForceClose);
-        this.client = null;
+        await this.getClient().close(shouldForceClose);
+        this.client = Optional.nullable<MongoClient>();
     }
 
     public isConnected(): boolean {
-        return this.client !== null && this.client.isConnected();
+        return !this.client.isNullable() && this.getClient().isConnected();
     }
 
     public getClient(): MongoClient {
-        if (!this.client) {
+        if (this.client.isNullable()) {
             throw new UnavailableInstanceError('the instance is not connected');
         }
 
-        return this.client;
+        return this.client.getValue();
     }
 
     public getDefaultDatabase(): Db {
-        if (!this.client) {
-            throw new UnavailableInstanceError('the instance is not connected');
-        }
-
-        return this.client.db(this.config.database);
+        return this.getClient().db(this.config.database);
     }
 }
 
 class MongoPool {
-    private readonly instances: Map<MongoInstanceId, MongoInstance>;
+    private readonly instances: Map<MongoInstanceId, MongoInstance> = new Map<MongoInstanceId, MongoInstance>();
 
     public constructor(instances: MongoInstanceConfig[]) {
         if (instances.length === 0) {
@@ -67,7 +64,7 @@ class MongoPool {
     }
 
     public getInstance(id: MongoInstanceId): Optional<MongoInstance> {
-        return this.instances.get(id) || null;
+        return Optional.ofNullable<MongoInstance>(this.instances.get(id));
     }
 
     // TODO: Add smart selection strategy

@@ -3,15 +3,15 @@ import config from "~/config";
 
 export default class MongoUtil {
 
-    public static getMongoConfiguration(): Application.Configuration.MongoConfiguration {
+    public static getMongoConfiguration(): App.Configuration.MongoConfiguration {
         return config.database.mongo;
     }
 
     public static async initializeMongoDB() {
         const config = this.getMongoConfiguration();
-        const mongo = MongoClient.connect('mongodb://' + config.host + ':' + config.port, {
-            useUnifiedTopology: true,
-        });
+        // const mongo = MongoClient.connect('mongodb://' + config.host + ':' + config.port, {
+        //     useUnifiedTopology: true,
+        // });
     }
 
     public static convertToObjectId(id: string | ObjectId): ObjectId {

@@ -1,4 +1,4 @@
-const config: Application.Configuration = {
+const config: App.Configuration.Configuration = {
     database: {
         mongo: {
             instances: [{
