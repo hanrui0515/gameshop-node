@@ -1,14 +1,11 @@
-export default class ResponseBody {
-    public readonly status: number;
-    public readonly error: Error;
-    public readonly data: any;
-    public readonly timestamp: number;
+class ResponseBody {
 
-    private constructor(status: number, error: Error, data: any, timestamp: number) {
-        this.status = status;
-        this.error = error;
-        this.data = data;
-        this.timestamp = timestamp;
+    private constructor(
+        public status: number,
+        public error: Error,
+        public data: any,
+        public timestamp: number
+    ) {
     }
 
     public static success(data: any): ResponseBody {
@@ -48,13 +45,12 @@ export default class ResponseBody {
 }
 
 class Error {
-    public readonly code: number;
-    public readonly message: string;
-    public readonly details: string;
-
-    public constructor(code: number, message: string, details?: string) {
-        this.code = code;
-        this.message = message;
-        this.details = details;
+    public constructor(
+        public code: number,
+        public message: string,
+        public details?: string
+    ) {
     }
 }
+
+export default ResponseBody;

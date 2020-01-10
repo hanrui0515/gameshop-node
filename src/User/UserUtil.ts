@@ -1,5 +1,5 @@
 import {Db} from "mongodb";
-import MongoUtil from "../Common/Mongo/MongoUtil";
+import MongoUtil from "../Common/Utils/MongoUtil";
 import Crypto from 'crypto';
 
 export default class UserUtil {
@@ -19,19 +19,19 @@ export default class UserUtil {
 
     public static async removeUser(db: Db, id: string): Promise<boolean> {
         const collection = db.collection('user');
-        const result = await collection.deleteOne({_id: MongoUtil.toObjectId(id)});
+        const result = await collection.deleteOne({_id: MongoUtil.convertToObjectId(id)});
 
         return result.result.ok === 1;
     }
 
     public static async findUser(db: Db, id: string): Promise<object> {
         const collection = db.collection('user');
-        return await collection.findOne({_id: MongoUtil.toObjectId(id)});
+        return await collection.findOne({_id: MongoUtil.convertToObjectId(id)});
     }
 
     public static async updateUser(db: Db, id: string, document: object): Promise<boolean> {
         const collection = db.collection('user');
-        const result = await collection.updateOne({_id: MongoUtil.toObjectId(id)}, document);
+        const result = await collection.updateOne({_id: MongoUtil.convertToObjectId(id)}, document);
 
         return result.result.ok === 1;
     }
@@ -69,21 +69,21 @@ export default class UserUtil {
 
     public static async setupToken(db: Db, userId: string, token: string, expiredAt: Date): Promise<boolean> {
         const collection = db.collection('user_token');
-        const result = await collection.insertOne({userId: MongoUtil.toObjectId(userId), token, expiredAt});
+        const result = await collection.insertOne({userId: MongoUtil.convertToObjectId(userId), token, expiredAt});
 
         return result.result.ok === 1;
     }
 
     public static async revokeToken(db: Db, userId: string, token: string) {
         const collection = db.collection('user_token');
-        const result = await collection.deleteOne({userId: MongoUtil.toObjectId(userId), token});
+        const result = await collection.deleteOne({userId: MongoUtil.convertToObjectId(userId), token});
 
         return result.result.ok === 1;
     }
 
     public static async revokeAllTokens(db: Db, userId: string) {
         const collection = db.collection('user_token');
-        const result = await collection.deleteMany({userId: MongoUtil.toObjectId(userId)});
+        const result = await collection.deleteMany({userId: MongoUtil.convertToObjectId(userId)});
 
         return result.result.ok === 1;
     }

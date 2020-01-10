@@ -1,20 +1,19 @@
 import HTTP from 'http';
-import Koa, {BaseContext, Next} from 'koa';
+import Koa from 'koa';
 import Parser from 'koa-parser';
 import Router from '@koa/router';
 import SocketIO from "socket.io";
 import MongoDB, {MongoClient, ObjectId} from 'mongodb';
 import ResponseBody from "./Common/HTTP/ResponseBody";
-import KoaUtil from "./Common/HTTP/KoaUtil";
-import JWTUtil from "./Common/HTTP/JWTUtil";
+import KoaUtil from "./Common/Utils/KoaUtil";
+import JWTUtil from "./Common/Utils/JWTUtil";
 import UserUtil from "./User/UserUtil";
 import SocketIOConstant from "./Common/SocketIO/SocketIOConstant";
+import MongoUtil from "./Common/Utils/MongoUtil";
+import ChatUtil from "./Chat/ChatUtil";
+import UserRepository from "~/Business/User/Repository/UserRepository";
+import InversifyUtil from "~/Common/Utils/InversifyUtil";
 
-declare module 'koa' {
-    interface BaseContext {
-        user: object;
-    }
-}
 
 async function connectMongoDB(): Promise<MongoClient> {
     console.log('[' + new Date().toISOString() + '] Connecting to MongoDB...');
@@ -27,7 +26,7 @@ async function connectMongoDB(): Promise<MongoClient> {
 }
 
 
-async function startApp() {
+async function runApp() {
     const mongo = await connectMongoDB();
     const db = mongo.db('gameshop');
 
@@ -37,7 +36,7 @@ async function startApp() {
 
     const router = new Router();
 
-    const userAuthorizationMiddleware = async (ctx: BaseContext, next: Next) => {
+    const userAuthorizationMiddleware: Koa.Middleware = async (ctx, next) => {
         if (!ctx.headers['authorization']) {
             KoaUtil.setResponse(ctx, ResponseBody.unauthenticated('No valid authentication credential'));
             return;
@@ -50,12 +49,13 @@ async function startApp() {
             return;
         }
 
-        ctx.user = user;
+        const userRepository = InversifyUtil.getContainer().get(UserRepository);
+        ctx.request.user = await userRepository.findByToken(token);
 
         return await next();
     };
 
-    const adminAuthorizationMiddleware = async (ctx: BaseContext, next: Next) => {
+    const adminAuthorizationMiddleware: Koa.Middleware = async (ctx, next) => {
         if (!ctx.headers['authorization']) {
             KoaUtil.setResponse(ctx, ResponseBody.unauthenticated('No valid authentication credential'));
             return;
@@ -130,6 +130,14 @@ async function startApp() {
         });
     router
         .use(userAuthorizationMiddleware)
+        .get('/api/v1/user/info', (ctx) => {
+            // @ts-ignore
+            const user = UserUtil.findUser(db, MongoUtil.convertToStringId(ctx.user._id));
+
+            KoaUtil.setResponse(ctx, ResponseBody.success({...user, password: void 0}));
+        });
+    router
+        .use(userAuthorizationMiddleware)
         .post('/api/v1/user/logout', (ctx) => {
         });
     router
@@ -152,17 +160,33 @@ async function startApp() {
     koa.use(Parser());
     koa.use(router.routes());
 
-    const unauthorizedSockets: Map<string, boolean> = new Map<string, boolean>();
+    const onlineSockets: Map<string, boolean> = new Map<string, boolean>();
     const userIdToSocketIdMapping: Map<string, string> = new Map<string, string>();
     const socketIdToUserIdMapping: Map<string, string> = new Map<string, string>();
+    const unauthorizedSockets: Map<string, boolean> = new Map<string, boolean>();
 
     io.on('connection', (socket) => {
         console.log('[' + new Date().toISOString() + '] Incoming WebSocket connection from ' + socket.request.connection.remoteAddress);
 
         const sid = socket.id;
 
-        socket.emit('authorize', {waitingTime: SocketIOConstant.authorizationTimeout});
+        const initSocket = () => {
+
+        };
+
+        const destroySocket = () => {
+            onlineSockets.delete(sid);
+            unauthorizedSockets.delete(sid);
+            if (socketIdToUserIdMapping.has(sid)) {
+                userIdToSocketIdMapping.delete(socketIdToUserIdMapping.get(sid));
+            }
+            socketIdToUserIdMapping.delete(sid);
+        };
+
+        onlineSockets.set(sid, true);
         unauthorizedSockets.set(sid, true);
+
+        socket.emit('authorize', {waitingTime: SocketIOConstant.authorizationTimeout});
 
         const authorizationTimer = setTimeout(() => {
             if (unauthorizedSockets.has(sid)) {
@@ -173,7 +197,9 @@ async function startApp() {
         }, SocketIOConstant.authorizationTimeout);
 
         socket.on('authorize', async ({token}) => {
-            if (!await UserUtil.matchToken(db, token)) {
+            let user: object;
+
+            if (!(user = await UserUtil.matchToken(db, token))) {
                 socket.emit('authorizeError', {error: {message: 'Invalid token'}});
                 socket.disconnect(true);
                 unauthorizedSockets.delete(sid);
@@ -181,11 +207,15 @@ async function startApp() {
                 return;
             }
 
+            // @ts-ignore
+            socketIdToUserIdMapping.set(sid, MongoUtil.convertToStringId(user._id));
+            // @ts-ignore
+            userIdToSocketIdMapping.set(MongoUtil.convertToStringId(user._id), sid);
+
             socket.emit('authorized');
         });
 
-        socket.on('startSession', () => {
-
+        socket.on('startSession', ({userId}) => {
         });
 
         socket.on('listSession', () => {
@@ -199,6 +229,10 @@ async function startApp() {
         socket.on('sendMessage', () => {
 
         });
+
+        socket.on('disconnect', () => {
+            destroySocket();
+        })
     });
 
     http.addListener('request', koa.callback());
@@ -216,4 +250,4 @@ async function startApp() {
 
 }
 
-startApp();
+export {runApp};

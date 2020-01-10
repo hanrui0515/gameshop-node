@@ -1,12 +1,31 @@
 {
   "compilerOptions": {
+    "target": "es5",
+    "lib": [
+      "es6",
+      "dom"
+    ],
+    "types": [
+      "reflect-metadata"
+    ],
     "module": "commonjs",
     "moduleResolution": "node",
     "esModuleInterop": true,
-    "target": "es5",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "inlineSourceMap": true,
-    "outDir": "dist"
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "~/*": [
+        "src/*"
+      ]
+    }
   },
+  "include": [
+    "src/**/*.ts",
+    "decl/**/*.d.ts"
+  ],
   "exclude": [
     "node_modules"
   ]
