@@ -1,0 +1,9 @@
+language: node_js
+node_js:
+  - "8.16"
+  - "10.15"
+  - "11.15"
+  - "12.3"
+
+script:
+  - exit 0
