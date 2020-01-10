@@ -22,18 +22,22 @@ describe('API testing', () => {
         };
     });
 
-    it('User registration', async () => {
+    it('User registration', async (done) => {
         for (let i in userData) {
             const response = await axios.put('/api/v1/user/register', userData[i]);
 
             expect(response.data.error).toBeNull();
         }
+
+        done();
     });
 });
 
 describe('WebSocket testing', () => {
-    it('Establish connection to server', async () => {
-        const client = createSocketClient('http://localhost:62120/ws');
+    it('Establish connection to server', async (done) => {
+        jest.setTimeout(5000);
+
+        const client = createSocketClient('http://localhost:62180', {path: '/ws'});
 
         client.connect();
 
@@ -46,13 +50,15 @@ describe('WebSocket testing', () => {
         const timer = new Promise((resolve) => {
             setTimeout(() => {
                 resolve(false);
-            }, 1000);
+            }, 3000);
         });
 
         const result = await Promise.race([promise, timer]);
         client.close();
 
         expect(result).toBeTruthy();
+
+        done();
     });
 
 });
