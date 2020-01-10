@@ -1,8 +1,6 @@
 # Game Online Shop
 
-[](https://travis-ci.com/hanrui0515/gameshop-node.svg?branch=master)
-
----
+![](https://travis-ci.com/hanrui0515/gameshop-node.svg?branch=master)
 
 ### Requirements
 
