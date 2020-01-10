@@ -1,5 +1,9 @@
 # Game Online Shop
 
+[](https://travis-ci.com/hanrui0515/gameshop-node.svg?branch=master)
+
+---
+
 ### Requirements
 
 Node.js >= 10 (Must be supported the Reflect API)
