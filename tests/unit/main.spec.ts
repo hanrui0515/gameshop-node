@@ -22,7 +22,7 @@ describe('API testing', () => {
         };
     });
 
-    it('User registration', async (done) => {
+    it('UserEntity registration', async (done) => {
         for (let i in userData) {
             const response = await axios.put('/api/v1/user/register', userData[i]);
 

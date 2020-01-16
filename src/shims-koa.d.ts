@@ -1,8 +1,8 @@
-import Optional from "./Common/Utils/Optional";
+import UserEntity from "~/Business/User/Data/Entity/UserEntity";
 
 declare module 'koa' {
     interface Request {
-        user: Optional<App.Business.User.Value.User>;
+        user: Nullable<UserEntity>;
     }
 }
 

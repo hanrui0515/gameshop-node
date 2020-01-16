@@ -10,10 +10,6 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "inlineSourceMap": true,
-    "typeRoots": [
-      "node_modules/@types",
-      "./typings"
-    ],
     "baseUrl": ".",
     "paths": {
       "~/*": [
@@ -26,6 +22,7 @@
     "src/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "**/*.spec.ts"
   ]
 }

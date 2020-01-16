@@ -1,3 +1,5 @@
+declare type Nullable<T> = T | null;
+
 declare namespace App {
 
     namespace Network {
