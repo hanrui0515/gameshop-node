@@ -17,7 +17,7 @@
     "@koa/router": "^8.0.5",
     "axios": "^0.19.1",
     "inversify": "^5.0.1",
-    "jsonwebtoken": "^8.5.1",
+    "jsonwebtoken": "^9.0.0",
     "koa": "^2.11.0",
     "koa-parser": "^1.0.8",
     "koa-session": "^5.12.3",
